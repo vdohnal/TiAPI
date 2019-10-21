@@ -1,0 +1,44 @@
+
+[log]
+    level = "INFO"
+
+[api]
+[accessLog]
+
+[providers]
+    providersThrottleDuration = 10
+    [providers.docker]
+    [providers.file]
+        filename = "traefik.toml"
+        directory = "/etc/traefik/"
+        watch = true
+
+# Entrypoints, http and https
+[entryPoints]
+  [entryPoints.web]
+    address = ":80"
+  [entryPoints.web-secure]
+    address = ":443"
+
+[http.routers]
+  [http.routers.api]
+    rule="PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
+    service = "api@internal"
+    entrypoints = ["web-secure"]
+    middlewares = ["auth"]
+    [http.routers.api.tls]
+        options = "mintls13"
+
+[tls.stores]
+  [tls.stores.default]
+    [tls.stores.default.defaultCertificate]
+      certFile = "/etc/traefik/certs/cert.crt"
+      keyFile = "/etc/traefik/certs/api.key"
+
+[tls.options]
+  [tls.options.mintls13]
+    minVersion = "VersionTLS13"
+
+[http.middlewares]
+    [http.middlewares.auth.basicAuth]
+        usersFile = "/etc/traefik/certs/authfile"

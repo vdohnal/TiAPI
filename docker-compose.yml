@@ -1,0 +1,81 @@
+version: '3'
+
+services:
+  db:
+    image: postgres:alpine
+    restart: always
+    labels:
+      - "traefik.enable=false"
+    networks:
+      - internal
+    hostname: ${DB_HOST}
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data/
+    env_file: .env
+    environment:
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_DB=${DB_NAME}
+
+  web:
+    build: .
+    restart: always
+    networks:
+      - internal
+    volumes:
+      - ./static:/code/static
+      - ./TiAPI/migrations:/code/TiAPI/migrations
+    command: sh -c 'while !</dev/tcp/db/5432; do sleep 1; done'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.myapi.loadbalancer.server.port=8000"
+      - "traefik.http.routers.myapi.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.myapi.entrypoints=web-secure"
+      - "traefik.http.routers.myapi.tls=true"
+      - "traefik.http.routers.myapi.middlewares=auth@file"
+      - "traefik.http.routers.myapi.service=myapi"
+    env_file: .env
+    depends_on:
+      - db
+      - traefik
+      - nginx
+
+  traefik:
+    image: traefik:latest
+    restart: always
+    networks:
+      - internal
+    ports:
+      - 443:443
+      - 80:80
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https@docker"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik:/etc/traefik:ro
+
+  nginx:
+    image: nginx:alpine
+    restart: always
+    networks:
+      - internal
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./static:/static:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.nginx.loadbalancer.server.port=80"
+      - "traefik.http.routers.nginx.rule=PathPrefix(`/static`)"
+      - "traefik.http.routers.nginx.entrypoints=web-secure"
+      - "traefik.http.routers.nginx.tls=true"
+      - "traefik.http.routers.nginx.middlewares=auth@file"
+      - "traefik.http.routers.nginx.service=nginx"
+    depends_on:
+      - traefik
+
+networks:
+    internal:

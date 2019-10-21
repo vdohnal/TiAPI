@@ -2,6 +2,11 @@
 __pycache__/
 *.py[cod]
 *$py.class
+postgres-data
+traefik/certs
+static
+TiAPI/migrations
+.idea
 
 # C extensions
 *.so
