@@ -29,6 +29,31 @@
     [http.routers.api.tls]
         options = "mintls13"
 
+  [http.routers.django]
+    rule="PathPrefix(`/`)"
+    service = "django"
+    entrypoints = ["web-secure"]
+    middlewares = ["auth"]
+    [http.routers.django.tls]
+        options = "mintls13"
+
+  [http.routers.nginx]
+    rule="PathPrefix(`/static`)"
+    service = "nginx"
+    entrypoints = ["web-secure"]
+    middlewares = ["auth"]
+    [http.routers.nginx.tls]
+        options = "mintls13"
+
+[http.services]
+    [http.services.django.loadBalancer]
+        [[http.services.django.loadBalancer.servers]]
+            url = "http://django:8000"
+
+    [http.services.nginx.loadBalancer]
+        [[http.services.nginx.loadBalancer.servers]]
+            url = "http://nginx:80"
+
 [tls.stores]
   [tls.stores.default]
     [tls.stores.default.defaultCertificate]
