@@ -3,7 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 postgres-data
-traefik/certs
+traefik/certs/*
+!traefik/certs/.gitkeep
 static
 TiAPI/migrations
 .idea
