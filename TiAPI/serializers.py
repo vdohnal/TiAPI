@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from TiAPI.models import UserModel, CodeModel
+from TiAPI.models import UserModel, CodeModel, CodeGroupModel
 
 
 class RequestAddCodeSerializer(serializers.Serializer):
@@ -28,4 +28,10 @@ class UserSerializer(serializers.ModelSerializer):
 class CodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = CodeModel
+        fields = "__all__"
+
+
+class CodeGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CodeGroupModel
         fields = "__all__"

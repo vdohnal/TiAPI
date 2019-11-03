@@ -3,6 +3,8 @@
     level = "INFO"
 
 [api]
+    dashboard = true
+
 [accessLog]
 
 [providers]
@@ -21,19 +23,19 @@
     address = ":443"
 
 [http.routers]
-  [http.routers.api]
-    rule="PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
+  [http.routers.dashboard]
+    rule="Host(`localhost`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
     service = "api@internal"
     entrypoints = ["web-secure"]
-    middlewares = ["auth"]
-    [http.routers.api.tls]
+#    middlewares = ["auth"]
+    [http.routers.dashboard.tls]
         options = "mintls13"
 
   [http.routers.django]
     rule="PathPrefix(`/`)"
     service = "django"
     entrypoints = ["web-secure"]
-    middlewares = ["auth"]
+#    middlewares = ["auth"]
     [http.routers.django.tls]
         options = "mintls13"
 
@@ -41,7 +43,7 @@
     rule="PathPrefix(`/static`)"
     service = "nginx"
     entrypoints = ["web-secure"]
-    middlewares = ["auth"]
+#    middlewares = ["auth"]
     [http.routers.nginx.tls]
         options = "mintls13"
 

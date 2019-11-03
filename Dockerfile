@@ -11,7 +11,7 @@ COPY ./Pipfile.lock /code/Pipfile.lock
 
 RUN apk update \
     && apk add --virtual build-deps gcc python3-dev musl-dev \
-    && apk add postgresql-dev \
+    && apk add postgresql-dev postgresql-client \
     && pip install pipenv \
     && pipenv install --system --ignore-pipfile --deploy \
     && apk del build-deps

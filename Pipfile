@@ -14,6 +14,7 @@ django = "*"
 gunicorn = "*"
 psycopg2 = "*"
 django-rest-framework = "*"
+djangorestframework-simplejwt = "*"
 
 [requires]
 python_version = "3.7"

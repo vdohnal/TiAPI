@@ -13,10 +13,14 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.urls import path, re_path
+import rest_framework_simplejwt.views as jwt_views
+from django.contrib import admin
+from django.urls import path, re_path, include
+from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 
+from TiAPI.router import router
 from TiAPI.views import *
 
 schema_view = get_schema_view(
@@ -29,18 +33,28 @@ schema_view = get_schema_view(
         license=openapi.License(name="MIT License"),
     ),
     public=True,
-    permission_classes=(permissions.AllowAny,),
+    permission_classes=(permissions.IsAuthenticated,),
 )
 
 urlpatterns = [
+    path('admin', admin.site.urls),
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    path('add/code', AddCode.as_view()),
-    path('add/user', AddUser.as_view()),
-    path('get/users', GetUsers.as_view()),
-    path('get/codes', GetCodes.as_view()),
-    path('get/user_codes', GetUserCodes.as_view()),
-]
+    re_path(r'^swagger$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    re_path(r'^redoc$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path('tiapi/', include(router.urls)),
+    # path('auth/', include('django.contrib.auth.urls')),
+    path('tiapi/test_login', TestLogin.as_view()),
+    path('', schema_view.with_ui('swagger', cache_timeout=0), name='home'),
+    path('tiapi/token/new', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('tiapi/token/refresh', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
+    path('tiapi/token/validate', jwt_views.TokenVerifyView.as_view(), name='token_validate'),
+    path('auth/login', JWTLoginView.as_view(), name='login'),
+    path('auth/logout', JWTLogoutView.as_view(), name='logout'),
+    # path('auth/', include(auth_urls))
 
+    # path('add/code', AddCode.as_view()),
+    # path('add/user', AddUser.as_view()),
+    # path('get/users', GetUsers.as_view()),
+    # path('get/codes', GetCodes.as_view()),
+    # path('get/user_codes', GetUserCodes.as_view()),
+]

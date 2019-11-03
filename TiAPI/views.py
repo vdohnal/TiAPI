@@ -1,17 +1,92 @@
-from drf_yasg import openapi
-from drf_yasg.openapi import Schema
+from datetime import timedelta
+
+import rest_framework_simplejwt.views as jwt_views
+from django.conf import settings
+from django.contrib.auth import mixins
+from django.http import HttpResponseRedirect
+from django.urls import resolve, Resolver404
+from django.views.generic import FormView, UpdateView, RedirectView
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+import TiAPI.models as models
+from TiAPI.forms import UserLoginForm
 from .serializers import *
-from .models import *
+
+
+class TestLogin(APIView, mixins.LoginRequiredMixin):
+    login_url = settings.LOGIN_URL
+
+    @staticmethod
+    def get():
+        return Response(status=200)
+
+
+class JWTLogoutView(RedirectView):
+    permanent = False
+    query_string = False
+    url = settings.LOGOUT_REDIRECT_URL
+
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, args, kwargs)
+        response.delete_cookie('login_token')
+        response.delete_cookie('refresh_token')
+        return response
+
+
+class JWTLoginView(FormView):
+    form_class = UserLoginForm
+    template_name = 'auth/login.html'
+    success_url = None
+
+    def form_valid(self, form):
+        # print(form.cleaned_data)
+        username = form.cleaned_data.get('username')
+        password = form.cleaned_data.get('password')
+        if not self.success_url:
+            self.success_url = self.request.GET.get('next', settings.LOGIN_REDIRECT_URL)
+        try:
+            resolve(self.get_success_url())
+        except Resolver404:
+            self.success_url = settings.LOGIN_REDIRECT_URL
+        print('CURRENT LOGIN REDIRECT', self.get_success_url())
+        login_response = jwt_views.TokenObtainPairView.as_view()(self.request, username=username, password=password)
+        # print('DATA----------------------------------------------------------------')
+        # print(login_response, login_response.data, login_response.status_code)
+        if login_response.status_code != status.HTTP_200_OK:
+            return super().form_invalid(form)
+            # return Response("Invalid login credentials.", status=status.HTTP_401_UNAUTHORIZED)
+        if self.get_success_url() == self.request.path:
+            raise ValueError(
+                "Redirection loop for authenticated user detected. Check that "
+                "your LOGIN_REDIRECT_URL doesn't point to a login page."
+            )
+        mresponse = HttpResponseRedirect(self.get_success_url())
+        # mresponse.set_cookie('login_token', login_response.data.get('access'), httponly=True,
+        #                      max_age=timedelta(seconds=5).total_seconds(), )
+        mresponse.set_cookie('login_token', login_response.data.get('access'), httponly=True,
+                             max_age=settings.SIMPLE_JWT.get('ACCESS_TOKEN_LIFETIME',
+                                                             timedelta(seconds=5)).total_seconds(), )
+        mresponse.set_cookie('refresh_token', login_response.data.get('refresh'), httponly=True,
+                             max_age=settings.SIMPLE_JWT.get('REFRESH_TOKEN_LIFETIME',
+                                                             timedelta(days=1)).total_seconds(), )
+        return mresponse
+
+
+class CodeGroupViewSet(viewsets.ModelViewSet):
+    queryset = models.CodeGroupModel.objects.all()
+    serializer_class = CodeGroupSerializer
+
+
+class CodeViewSet(viewsets.ModelViewSet):
+    queryset = models.CodeModel.objects.all()
+    serializer_class = CodeSerializer
 
 
 class GetUserCodes(ListAPIView):
-
     serializer_class = CodeSerializer
 
     def get_queryset(self):
