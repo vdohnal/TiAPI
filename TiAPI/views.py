@@ -5,7 +5,8 @@ from django.conf import settings
 from django.contrib.auth import mixins
 from django.http import HttpResponseRedirect
 from django.urls import resolve, Resolver404
-from django.views.generic import FormView, UpdateView, RedirectView
+from django.views.generic import FormView, RedirectView
+from django.views.generic.base import View
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets
 from rest_framework.generics import ListAPIView
@@ -14,6 +15,7 @@ from rest_framework.views import APIView
 
 import TiAPI.models as models
 from TiAPI.forms import UserLoginForm
+from TiAPI.utils.backup_utils import BackupManager
 from .serializers import *
 
 
@@ -84,6 +86,34 @@ class CodeGroupViewSet(viewsets.ModelViewSet):
 class CodeViewSet(viewsets.ModelViewSet):
     queryset = models.CodeModel.objects.all()
     serializer_class = CodeSerializer
+
+
+class DatabaseView(View):
+    @swagger_auto_schema(operation_description="Backup database to JSON file.",
+                         responses={
+                             status.HTTP_201_CREATED: "Successfuly created a backup to returned filename.",
+                             status.HTTP_500_INTERNAL_SERVER_ERROR: "Unable to generate a backup."
+                         })
+    def get(self):
+        filename = BackupManager.backup()
+        return Response(filename, status=201)
+
+    @swagger_auto_schema(operation_description="Restore database from JSON backup.",
+                         responses={
+                             status.HTTP_200_OK: "Succesfully restored database.",
+                             status.HTTP_500_INTERNAL_SERVER_ERROR: "Invalid filename.",
+                             status.HTTP_422_UNPROCESSABLE_ENTITY: "Error while restoring."
+                         })
+    def post(self, request):
+        if 'filename' not in request.data:
+            return Response("Filename not specified", status=422)
+        msg, response = BackupManager.restore(request.data.get('filename'))
+        return Response(msg, status=200) if response else Response(msg, status=500)
+
+
+class BackupView(ListAPIView):
+    serializer_class = None
+    queryset = BackupManager.get_backup_filenames()
 
 
 class GetUserCodes(ListAPIView):

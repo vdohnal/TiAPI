@@ -15,6 +15,7 @@ gunicorn = "*"
 psycopg2 = "*"
 django-rest-framework = "*"
 djangorestframework-simplejwt = "*"
+schedule = "*"
 
 [requires]
 python_version = "3.7"
